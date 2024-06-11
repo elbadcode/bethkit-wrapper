@@ -2,10 +2,10 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Open With Bethkit"
-#define MyAppVersion "1.0"
+#define MyAppVersion "2.0"
 #define MyAppPublisher "lobotomy"
 #define MyAppURL "https://github.com/elbadcode"
-#define MyAppExeName "bethkit.bat"
+#define MyAppExeName "bethkitwrapper.exe"
 #define MyAppExeName2 "DownloadFromNexus.bat"
 #define MyAppAssocName MyAppName + ""
 #define XMLAppName "ConvertBackFromXML.bat"
@@ -45,10 +45,10 @@ WizardStyle=modern
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "C:\Games\bethkit\bethkit.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Games\bethkit\bethkitwrapper.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Games\bethkit\DownloadFromNexus.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Games\bethkit\ConvertBackFromXML.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Games\bethkit\getEDIDs.py"; DestDir: "{app}";Flags: ignoreversion
+
 
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
