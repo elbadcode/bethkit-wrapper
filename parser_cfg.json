@@ -1,0 +1,9 @@
+{
+  "parsevars": [
+    "EDID",
+    "MGEF",
+    "MODL",
+    "WEAP",
+    "struct"
+  ]
+}
