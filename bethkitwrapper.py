@@ -1,15 +1,31 @@
-import os, sys, re, subprocess, shutil
+import os, sys, re, subprocess, shutil,ctypes
 import json
 from lxml import etree as ET
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog
+import datetime
+from win32com.shell import shell
+import win32com.client as win32
 
 
-os.environ['bethkit'] = "C:\\Games\\Bethkit\\bethkit.exe"
+
+def get_install_path():
+    bethkit = ""
+    bethkit_wrapper = "C:\\ProgramData\\Start Menu\\Programs\\Bethkit Wrapper\\Bethkit Wrapper.lnk"
+    shell = win32.Dispatch("WScript.Shell")
+    shortcut = shell.CreateShortCut(bethkit_wrapper)
+    try:
+        os.environ['bethkit'] = shortcut.Targetpath
+        with open(os.path.join(sys.path[0], f"error-{datetime.datetime.now()}.txt"), "w") as f:
+            print(shortcut.Targetpath,file = f)
+    except Exception as e:
+        with open(os.path.join(sys.path[0], f"error-{datetime.datetime.now()}.txt"), "w") as f:
+            print(e, file=f)
+        os.environ['bethkit'] = os.path.join(sys.path[0], "bethkit.exe")
 
 
-#globals
+
 def set_globals():
     validate_path()
     global script_path
@@ -29,9 +45,9 @@ def set_globals():
     global ext
     name, ext = str(file).split('.')
     global temp_file
-    temp_file = name + '.esx'
+    temp_file = name + '-intermediate.esx'
     global out_file
-    out_file = name + '.xml'
+    out_file = name + '-converted.xml'
     global summary
     summary = name + '-summary.txt'
     global summary2
@@ -90,7 +106,7 @@ def parse_and_summarize():
     with open (summary, "a") as f:
         parse_vars = []
         try:
-            with open(os.path.join(os.path.dirname(script_path), "parser_cfg.json"), "r") as conf:
+            with open(os.path.join(os.path.dirname(script_path), "parser_acfg.json"), "r") as conf:
                 conf_json = json.load(conf)
                 for var in conf_json["parsevars"]:
                     parse_vars.append(var)
@@ -109,10 +125,10 @@ def parse_and_summarize():
             for parse_var in parse_vars:
                 #sorry
                 #reg = f"r'^(<{parse_var}(>(\\s|.+)?<| (.+))>)|(<{parse_var}>(.+)<)$'"
-                reg = f"(<{parse_var}(>(\s|.+)?<| (.+))>)|(<{parse_var}>(.+)<)"
+                reg = f"(<{parse_var}(>(\\s|.+)?<| (.+))>)|(<{parse_var}>(.+)<)"
                 reg = 'r\"' + reg + '\"'
                 print(str(reg))
-                get_edids(search_regex=str(reg))
+                regex_parse(search_regex=str(reg))
                 vars = root.iter(f'{parse_var}')
                 for var_entry in vars:
                     var = var_entry.tag
@@ -134,10 +150,7 @@ def parse_and_summarize():
 
 
 #Regex version reads raw text without needing to interact with xml structure
-
-
-
-def get_edids(search_regex):
+def regex_parse(search_regex):
     with open(summary2, "a") as log:
         xmlf = os.path.join(os.getcwd(), out_file)
         try:
@@ -183,21 +196,19 @@ def convert_xml_to_esx(path):
     parent_path = os.path.dirname(path)
     os.chdir(parent_path)
     esx = ext_change(path, '.esx')
-    print(esx)
+    os.rename(path,esx)
     return esx
 
 
 def convert_to_esp(path):
-    if path.endswith('.xml'):
-        path = convert_xml_to_esx(path)
     p = Path(path)
-    if p.exists():
-        os.chdir(p.parent_path)
-        os.makedir('output')
-        out = ext_change(p, '.esp')
-        out_path = os.path.join('output')
-        out_file = os.path.join(out_path, out)
-        subprocess.run("{bethkit} {path} {out_file}")
+    parent = os.path.dirname(path)
+    print(parent)
+    os.chdir(parent)
+    out = ext_change(p, '-edited.esp')
+    out_file = os.path.join(parent, out)
+    print(f"{bethkit} convert {path} {out_file}")
+    subprocess.run(f"{bethkit} convert {path} {out_file}")
 
 def draw_dnd_box():
     root = TkinterDnD.Tk()
@@ -214,12 +225,15 @@ def draw_dnd_box():
 
 
 def main():
-    if sys.argv:
+    try:
         if len(sys.argv) == 1:
             try:
-                arg = tk.filedialog.askopenfilename(initialdir=os.getcwd(), filetypes=(('esp files', '*.esp'), ('esm files', '*.esm'), ('esl files', '*.esl'),('esx files', '*.esx'),('xml files', '*.xml')))
-                if arg.endswith(('xml', 'esx')):
-                    set_globals()
+                set_globals()
+                arg = tk.filedialog.askopenfilename(initialdir=os.getcwd(), filetypes=((('Bethesda plugin files', ('*.esp', '*.esm', '*.esl')),('Bethkit files', ('*.esx','*.xml')),(('All files', '*')))))
+                if str(arg).endswith('xml'):
+                    arg = convert_xml_to_esx(arg)
+                    convert_to_esp(arg)
+                elif str(arg).endswith('esx'):
                     convert_to_esp(arg)
                 elif arg.endswith(('esp', 'esl', 'esm')):
                     set_globals()
@@ -241,6 +255,7 @@ def main():
                         break
             except Exception as e:
                 print (e)
-
+    except IndexError:
+        print('python sucks')
 
 main()
